@@ -19,10 +19,20 @@ interface Props {
   node: CardNode
   isDock?: boolean
 }
+const PLACEHOLDER = '/assets/ui/placeholder.webp'
+
 const isFreeze = computed(() => {
   return props.node.parents.length > 0 ? props.node.parents.some(o => o.state < 2) : false
 },
 )
+
+const spriteSrc = computed(() => props.node.sprite ?? IMG_MAP[props.node.type] ?? PLACEHOLDER)
+
+const spriteSrcset = computed(() => {
+  if (props.node.sprite2x) return `${props.node.sprite2x} 2x`
+  if (props.node.sprite) return `${props.node.sprite} 2x`
+  return undefined
+})
 
 function handleClick() {
   if (!isFreeze.value)
@@ -38,7 +48,13 @@ function handleClick() {
   >
     <!-- {{ node.zIndex }}-{{ node.type }} -->
     <!-- {{ node.id }} -->
-    <img :src="IMG_MAP[node.type]" width="40" height="40" :alt="`${node.type}`">
+    <img
+      :src="spriteSrc"
+      :srcset="spriteSrcset"
+      width="40"
+      height="40"
+      :alt="`${node.type}`"
+    >
     <div v-if="isFreeze" class="mask" />
   </div>
 </template>
