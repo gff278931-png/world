@@ -67,8 +67,9 @@ echo -e "${BLUE}Processing UI icons...${NC}"
 process_ui_icon() {
   local src="$1"
   local name="$2"
-  convert "$src" -resize 44x44 -quality 80 -strip "./public/assets/ui/$name.webp"
-  convert "$src" -resize 88x88 -quality 80 -strip "./public/assets/ui/$name@2x.webp"
+  # convert with adaptive quality to meet <=150KB size
+  convert_with_target_size "$src" "./public/assets/ui/$name.webp" 44 44
+  convert_with_target_size "$src" "./public/assets/ui/$name@2x.webp" 88 88
 }
 
 # UI 图标处理（从解压的 Kenney UI Pack 中选取合适的图标）
@@ -81,6 +82,35 @@ process_ui_icon "./temp/ui/PNG/blue_button05.png" "play"
 process_ui_icon "./temp/ui/PNG/blue_boxCheckmark.png" "sound-on"
 process_ui_icon "./temp/ui/PNG/blue_boxCross.png" "sound-off"
 
+# Helper: convert image to webp with target max size (bytes)
+convert_with_target_size() {
+  local src="$1"
+  local out="$2"
+  local w="$3"
+  local h="$4"
+  local target_bytes=153600 # 150KB
+  local quality=80
+  local tmpout="${out}.tmp.webp"
+
+  while true; do
+    convert "$src" -resize ${w}x${h} -quality ${quality} -strip "$tmpout"
+    if [ -f "$tmpout" ]; then
+      size=$(stat -f%z "$tmpout" 2>/dev/null || stat -c%s "$tmpout" 2>/dev/null || echo 0)
+      if [ "$size" -le "$target_bytes" ] || [ "$quality" -le 30 ]; then
+        mv "$tmpout" "$out"
+        break
+      else
+        quality=$((quality - 5))
+        echo "Reducing quality to $quality for $out (size $size bytes)"
+      fi
+    else
+      # fallback to convert without tmp
+      convert "$src" -resize ${w}x${h} -quality $quality -strip "$out"
+      break
+    fi
+  done
+}
+
 # 创建占位图
 convert -size 44x44 xc:lightgray -quality 80 "./public/assets/ui/placeholder.webp"
 convert -size 88x88 xc:lightgray -quality 80 "./public/assets/ui/placeholder@2x.webp"
@@ -91,9 +121,9 @@ for i in {1..24}; do
   num=$(printf "%02d" $i)
   src="./temp/icons/PNG/White/2x/gamepad${i}.png"
   # 1x version (40x40)
-  convert "$src" -resize 40x40 -quality 80 -strip "./public/assets/cards/card-$num.webp"
+  convert_with_target_size "$src" "./public/assets/cards/card-$num.webp" 40 40
   # 2x version (80x80)
-  convert "$src" -resize 80x80 -quality 80 -strip "./public/assets/cards/card-$num@2x.webp"
+  convert_with_target_size "$src" "./public/assets/cards/card-$num@2x.webp" 80 80
 done
 
 # 处理音频文件

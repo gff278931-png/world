@@ -65,8 +65,14 @@ import loader from '../core/loader'
 const gameBoardRef = ref<HTMLElement | null>(null)
 const isScoreAnimating = ref(false)
 
-// 先预加载资源，再 init bridge 与游戏
-await loader.preloadAll()
+// 先通过 manifest 预加载资源（从 public/assets/manifest.json），再 init bridge 与游戏
+try {
+  // prefer manifest in public folder so assets list is authoritative
+  await loader.preloadFromUrl('/assets/manifest.json')
+} catch (e) {
+  // fallback to built-in ASSETS
+  await loader.preloadAll()
+}
 
 const game = useGame({
   cardNum: 5,

@@ -64,30 +64,33 @@ export async function loadAudio(url: string, timeout = 8000): Promise<LoadResult
   }
   return { url, ok: false, reason: 'unknown' }
 }
-
 import ASSETS from './assets'
 
 export async function preloadAll(): Promise<{ loaded: number; failed: number; details: LoadResult[] }> {
+  // Backwards-compatible: preload assets listed in ASSETS constant
+  return preloadManifest(ASSETS as any)
+}
+
+export async function preloadManifest(manifest: any): Promise<{ loaded: number; failed: number; details: LoadResult[] }> {
   const toLoad: string[] = []
-  ;(ASSETS.cards as string[]).forEach(s => toLoad.push(s))
-  ;(ASSETS.cards2x as string[]).forEach(s => toLoad.push(s))
-  Object.values(ASSETS.ui).forEach(s => toLoad.push(s))
-  Object.values(ASSETS.audio).forEach(s => toLoad.push(s))
+  ;(manifest.cards as string[] || []).forEach(s => toLoad.push(s))
+  ;(manifest.cards2x as string[] || []).forEach(s => toLoad.push(s))
+  Object.values(manifest.ui || {}).forEach(s => toLoad.push(s as string))
+  Object.values(manifest.audio || {}).forEach(s => toLoad.push(s as string))
 
   const results: LoadResult[] = []
 
   // load images first
-  const imageUrls = toLoad.filter(u => u.endsWith('.webp') || u.endsWith('.png'))
+  const imageUrls = toLoad.filter(u => u && (u.endsWith('.webp') || u.endsWith('.png') || u.endsWith('.jpg') || u.endsWith('.jpeg')))
   for (const url of imageUrls) {
-    // stop-gap: if resource missing, loader will return ok=false
-    const r = await loadImage(url).catch(e => ({ url, ok: false, reason: e?.message }))
+    const r = await loadImage(url).catch(e => ({ url, ok: false, reason: (e as any)?.message }))
     results.push(r)
   }
 
   // audio
-  const audioUrls = Object.values(ASSETS.audio)
+  const audioUrls = toLoad.filter(u => u && u.endsWith('.mp3'))
   for (const url of audioUrls) {
-    const r = await loadAudio(url).catch(e => ({ url, ok: false, reason: e?.message }))
+    const r = await loadAudio(url).catch(e => ({ url, ok: false, reason: (e as any)?.message }))
     results.push(r)
   }
 
@@ -99,4 +102,17 @@ export async function preloadAll(): Promise<{ loaded: number; failed: number; de
   return { loaded, failed, details: results }
 }
 
-export default { loadImage, loadAudio, preloadAll }
+export async function preloadFromUrl(manifestUrl = '/assets/manifest.json') {
+  try {
+    const resp = await fetch(manifestUrl)
+    if (!resp.ok) throw new Error(`Failed to fetch manifest: ${resp.status}`)
+    const manifest = await resp.json()
+    return preloadManifest(manifest)
+  } catch (e) {
+    console.error('[loader] preloadFromUrl failed', e)
+    // fallback to ASSETS constant
+    return preloadAll()
+  }
+}
+
+export default { loadImage, loadAudio, preloadAll, preloadManifest, preloadFromUrl }
