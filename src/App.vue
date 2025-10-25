@@ -189,31 +189,31 @@ onMounted(() => {
       ref="clickAudioRef"
       style="display: none;"
       controls
-      src="./audio/click.mp3"
+      src="/assets/audio/click.mp3"
     />
     <audio
       ref="dropAudioRef"
       style="display: none;"
       controls
-      src="./audio/drop.mp3"
+      src="/assets/audio/drop.mp3"
     />
     <audio
       ref="winAudioRef"
       style="display: none;"
       controls
-      src="./audio/win.mp3"
+      src="/assets/audio/win.mp3"
     />
     <audio
       ref="loseAudioRef"
       style="display: none;"
       controls
-      src="./audio/lose.mp3"
+      src="/assets/audio/lose.mp3"
     />
     <audio
       ref="welAudioRef"
       style="display: none;"
       controls
-      src="./audio/welcome.mp3"
+      src="/assets/audio/welcome.mp3"
     />
   </div>
 </template>

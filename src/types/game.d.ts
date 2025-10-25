@@ -4,14 +4,21 @@ export interface GameConfig {
     rows: number
     cols: number
   }
+  layerNum?: number
+  trap?: boolean
   minMatch?: number
   delNode?: boolean
   sound?: boolean
   container?: HTMLElement
   events?: {
+    // common event callbacks used across the app
     scoreCallback?: (score: number) => void
     winCallback?: (score: number) => void
     loseCallback?: (score: number) => void
+    clickCallback?: () => void
+    dropCallback?: () => void
+    // allow extra custom events
+    [k: string]: any
   }
 }
 

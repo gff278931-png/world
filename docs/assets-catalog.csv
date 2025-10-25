@@ -1,0 +1,10 @@
+name,type,target_path,source_url,license,notes
+Kenney UI Pack (button samples),ui,/assets/ui/undo.webp,https://kenney.nl/assets/ui-pack,CC0 (Kenney) use UI Pack icons for undo/hint/shuffle/restart/pause/play/sound-on/sound-off
+Kenney Game Icons (icons for cards),cards,/assets/cards/card-01.webp,https://kenney.nl/assets/game-icons,CC0 (Kenney) use multiple icons (24) as card faces
+Kenney Mobile Controls (touch-friendly icons),ui,/assets/ui/pause.webp,https://kenney.nl/assets/mobile-controls,CC0 (Kenney) useful for mobile-sized UI
+Mixkit - Retro Game Notification,audio,/assets/audio/select.mp3,https://mixkit.co/free-sound-effects/retro-game-notification,Mixkit Free License (commercial use allowed)
+Mixkit - Small Win Arcade,audio,/assets/audio/win.mp3,https://mixkit.co/free-sound-effects/small-win-arcade,Mixkit Free License
+Mixkit - Impact (match),audio,/assets/audio/match.mp3,https://mixkit.co/free-sound-effects/impact,Mixkit Free License
+Mixkit - Game Over (lose),audio,/assets/audio/arcade-retro-game-over,https://mixkit.co/free-sound-effects/game-over,Mixkit Free License
+
+# Notes: Download the Kenney packs (UI Pack / Game Icons / Mobile Controls) from kenney.nl or kenney.itch.io; extract desired PNGs, then convert to WebP and generate @2x versions using imagemagick. For Mixkit sounds visit the links and download MP3/WAV files and convert to 44.1kHz 128kbps using ffmpeg if necessary.
