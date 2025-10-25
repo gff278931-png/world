@@ -1,0 +1,6 @@
+dist/
+public/
+docs/
+*.md
+*.jsonc
+scripts/*.sh

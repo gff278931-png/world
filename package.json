@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "lint": "eslint .",
+    "lint": "eslint . --ext .ts,.vue",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc -p tsconfig.json --noEmit"
   },
