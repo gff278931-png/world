@@ -106,13 +106,40 @@ onMounted(() => {
 </script>
 
 <template>
-  <div flex flex-col w-full h-full>
-    <div text-44px text-center w-full color="#000" fw-600 h-60px flex items-center justify-center mt-10px>
+  <div
+    flex
+    flex-col
+    w-full
+    h-full
+  >
+    <div
+      text-44px
+      text-center
+      w-full
+      color="#000"
+      fw-600
+      h-60px
+      flex
+      items-center
+      justify-center
+      mt-10px
+    >
       兔了个兔
     </div>
-    <div ref="containerRef" flex-1 flex>
-      <div w-full relative flex-1>
-        <template v-for="item in nodes" :key="item.id">
+    <div
+      ref="containerRef"
+      flex-1
+      flex
+    >
+      <div
+        w-full
+        relative
+        flex-1
+      >
+        <template
+          v-for="item in nodes"
+          :key="item.id"
+        >
           <transition name="slide-fade">
             <Card
               v-if="[0, 1].includes(item.state)"
@@ -123,27 +150,66 @@ onMounted(() => {
         </template>
       </div>
       <transition name="bounce">
-        <div v-if="isWin" color="#000" flex items-center justify-center w-full text-28px fw-bold>
+        <div
+          v-if="isWin"
+          color="#000"
+          flex
+          items-center
+          justify-center
+          w-full
+          text-28px
+          fw-bold
+        >
           成功加入兔圈~
         </div>
       </transition>
       <transition name="bounce">
-        <div v-if="showTip" color="#000" flex items-center justify-center w-full text-28px fw-bold>
+        <div
+          v-if="showTip"
+          color="#000"
+          flex
+          items-center
+          justify-center
+          w-full
+          text-28px
+          fw-bold
+        >
           第{{ curLevel + 1 }}关
         </div>
       </transition>
     </div>
 
-    <div text-center h-50px flex items-center justify-center>
+    <div
+      text-center
+      h-50px
+      flex
+      items-center
+      justify-center
+    >
       <Card
-        v-for="item in removeList" :key="item.id" :node="item"
+        v-for="item in removeList"
+        :key="item.id"
+        :node="item"
         is-dock
         @click-card="handleSelectRemove"
       />
     </div>
-    <div w-full flex items-center justify-center>
-      <div border="~ 4px dashed #000" w-295px h-44px flex>
-        <template v-for="item in selectedNodes" :key="item.id">
+    <div
+      w-full
+      flex
+      items-center
+      justify-center
+    >
+      <div
+        border="~ 4px dashed #000"
+        w-295px
+        h-44px
+        flex
+      >
+        <template
+          v-for="item in selectedNodes"
+          :key="item.id"
+        >
           <transition name="bounce">
             <Card
               v-if="item.state === 2"
@@ -155,15 +221,34 @@ onMounted(() => {
       </div>
     </div>
 
-    <div h-50px flex items-center w-full justify-center>
-      <button :disabled="removeFlag" mr-10px @click="handleRemove">
+    <div
+      h-50px
+      flex
+      items-center
+      w-full
+      justify-center
+    >
+      <button
+        :disabled="removeFlag"
+        mr-10px
+        @click="handleRemove"
+      >
         移出前三个
       </button>
-      <button :disabled="backFlag" @click="handleBack">
+      <button
+        :disabled="backFlag"
+        @click="handleBack"
+      >
         回退
       </button>
     </div>
-    <div w-full color="#000" fw-600 text-center pb-10px>
+    <div
+      w-full
+      color="#000"
+      fw-600
+      text-center
+      pb-10px
+    >
       <span mr-20px>designer: Teacher Face</span>
       by: Xc
       <a

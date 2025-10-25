@@ -55,7 +55,10 @@ function handleClick() {
       height="40"
       :alt="`${node.type}`"
     >
-    <div v-if="isFreeze" class="mask" />
+    <div
+      v-if="isFreeze"
+      class="mask"
+    />
   </div>
 </template>
 
