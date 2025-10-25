@@ -145,70 +145,52 @@ ffmpeg -y -f lavfi -i "anullsrc=r=44100:cl=stereo" -t 0.5 -q:a 9 "./public/asset
 
 # 生成资源清单 manifest.json
 echo -e "${BLUE}Generating manifest.json...${NC}"
-cat > "./public/assets/manifest.json" << 'EOF'
+
+build_card_array() {
+  local postfix="$1"
+  local lines=()
+  for i in {1..24}; do
+    local num
+    num=$(printf "%02d" "$i")
+    local path="/assets/cards/card-${num}${postfix}.webp"
+    if [ "$i" -lt 24 ]; then
+      lines+=("    \"${path}\",")
+    else
+      lines+=("    \"${path}\"")
+    fi
+  done
+  printf "%s\n" "${lines[@]}"
+}
+
+cards_1x=$(build_card_array "")
+cards_2x=$(build_card_array "@2x")
+
+cat > "./public/assets/manifest.json" << EOF
 {
   "cards": [
-    "/assets/cards/card-01.webp",
-    "/assets/cards/card-02.webp",
-    "/assets/cards/card-03.webp",
-    "/assets/cards/card-04.webp",
-    "/assets/cards/card-05.webp",
-    "/assets/cards/card-06.webp",
-    "/assets/cards/card-07.webp",
-    "/assets/cards/card-08.webp",
-    "/assets/cards/card-09.webp",
-    "/assets/cards/card-10.webp",
-    "/assets/cards/card-11.webp",
-    "/assets/cards/card-12.webp",
-    "/assets/cards/card-13.webp",
-    "/assets/cards/card-14.webp",
-    "/assets/cards/card-15.webp",
-    "/assets/cards/card-16.webp",
-    "/assets/cards/card-17.webp",
-    "/assets/cards/card-18.webp",
-    "/assets/cards/card-19.webp",
-    "/assets/cards/card-20.webp",
-    "/assets/cards/card-21.webp",
-    "/assets/cards/card-22.webp",
-    "/assets/cards/card-23.webp",
-    "/assets/cards/card-24.webp"
+$(printf "%s" "$cards_1x")
   ],
   "cards2x": [
-    "/assets/cards/card-01@2x.webp",
-    "/assets/cards/card-02@2x.webp",
-    "/assets/cards/card-03@2x.webp",
-    "/assets/cards/card-04@2x.webp",
-    "/assets/cards/card-05@2x.webp",
-    "/assets/cards/card-06@2x.webp",
-    "/assets/cards/card-07@2x.webp",
-    "/assets/cards/card-08@2x.webp",
-    "/assets/cards/card-09@2x.webp",
-    "/assets/cards/card-10@2x.webp",
-    "/assets/cards/card-11@2x.webp",
-    "/assets/cards/card-12@2x.webp",
-    "/assets/cards/card-13@2x.webp",
-    "/assets/cards/card-14@2x.webp",
-    "/assets/cards/card-15@2x.webp",
-    "/assets/cards/card-16@2x.webp",
-    "/assets/cards/card-17@2x.webp",
-    "/assets/cards/card-18@2x.webp",
-    "/assets/cards/card-19@2x.webp",
-    "/assets/cards/card-20@2x.webp",
-    "/assets/cards/card-21@2x.webp",
-    "/assets/cards/card-22@2x.webp",
-    "/assets/cards/card-23@2x.webp",
-    "/assets/cards/card-24@2x.webp"
+$(printf "%s" "$cards_2x")
   ],
-  "ui": {
-    "undo": "/assets/ui/undo.webp",
-    "hint": "/assets/ui/hint.webp",
-    "shuffle": "/assets/ui/shuffle.webp",
-    "restart": "/assets/ui/restart.webp",
-    "pause": "/assets/ui/pause.webp",
-    "play": "/assets/ui/play.webp",
-    "soundOn": "/assets/ui/sound-on.webp",
-    "soundOff": "/assets/ui/sound-off.webp",
-    "placeholder": "/assets/ui/placeholder.webp"
+  "images": {
+    "cards": [
+$(printf "%s" "$cards_1x")
+    ],
+    "cards2x": [
+$(printf "%s" "$cards_2x")
+    ],
+    "ui": {
+      "undo": "/assets/ui/undo.webp",
+      "hint": "/assets/ui/hint.webp",
+      "shuffle": "/assets/ui/shuffle.webp",
+      "restart": "/assets/ui/restart.webp",
+      "pause": "/assets/ui/pause.webp",
+      "play": "/assets/ui/play.webp",
+      "soundOn": "/assets/ui/sound-on.webp",
+      "soundOff": "/assets/ui/sound-off.webp",
+      "placeholder": "/assets/ui/placeholder.webp"
+    }
   },
   "audio": {
     "select": "/assets/audio/select.mp3",

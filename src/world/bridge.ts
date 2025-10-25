@@ -20,9 +20,13 @@ export const bridge = {
       // 初始化逻辑
       this.ready = true
       return { ok: true, code: 0 }
-    } catch (e) {
-      console.error('[bridge] init failed:', e)
-      return { ok: false, code: -1, message: e instanceof Error ? e.message : 'Unknown error' }
+    } catch (error) {
+      console.error('[bridge] init failed:', error)
+      return {
+        ok: false,
+        code: -1,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      }
     }
   },
 
@@ -35,30 +39,45 @@ export const bridge = {
       console.log('[bridge] postScore', payload)
       // 发送分数逻辑
       return { ok: true, code: 0 }
-    } catch (e) {
-      console.error('[bridge] postScore failed:', e)
-      return { ok: false, code: -1, message: e instanceof Error ? e.message : 'Unknown error' }
+    } catch (error) {
+      console.error('[bridge] postScore failed:', error)
+      return {
+        ok: false,
+        code: -1,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      }
     }
   },
 
   onPause() {
-    if (!this.ready) return
+    if (!this.ready)
+      return
+
     console.log('[bridge] onPause')
     // 暂停回调
   },
 
   onResume() {
-    if (!this.ready) return
+    if (!this.ready)
+      return
+
     console.log('[bridge] onResume')
     // 恢复回调
   },
 
   setVolume(v: number) {
-    if (!this.ready) return
+    if (!this.ready)
+      return
+
     console.log('[bridge] setVolume', v)
     // call registered handler (if host wants to control in-app audio)
-    if (typeof this._volumeHandler === 'function') {
-      try { this._volumeHandler(v) } catch (e) { console.warn('[bridge] volume handler error', e) }
+    if (typeof this._volumeHandler !== 'function')
+      return
+
+    try {
+      this._volumeHandler(v)
+    } catch (error) {
+      console.warn('[bridge] volume handler error', error)
     }
   },
 
@@ -68,7 +87,7 @@ export const bridge = {
 
   isReady() {
     return this.ready
-  }
+  },
 }
 
 export default bridge

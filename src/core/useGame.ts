@@ -43,8 +43,8 @@ function coerceLevel(level: LevelDefinition, idx: number): LevelDefinition {
 
 export function useGame(config: GameConfig): Game {
   const baseConfig = { ...defaultGameConfig, ...config }
-  const container = baseConfig.container
-  const delNode = baseConfig.delNode
+  const _container = baseConfig.container
+  const _delNode = baseConfig.delNode
   const sound = baseConfig.sound ?? true
   const events = baseConfig.events ?? {}
 
@@ -138,10 +138,6 @@ export function useGame(config: GameConfig): Game {
     volume.value = clamp(v, 0, 1)
     Object.values(sounds).forEach(s => { s.volume = volume.value })
     isSoundEnabled.value = volume.value > 0
-  }
-
-  function getVolume() {
-    return volume.value
   }
 
   function stopTimer() {

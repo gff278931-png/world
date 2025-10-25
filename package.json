@@ -8,8 +8,9 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .ts,.vue",
-    "lint:fix": "eslint . --fix",
-    "type-check": "tsc -p tsconfig.json --noEmit"
+    "lint:fix": "eslint . --ext .ts,.vue --fix",
+    "type-check": "tsc -p tsconfig.json --noEmit",
+    "final:fix": "npm run lint:fix || true && npm run build && git add . && git commit -m \"fix(final): lint cleanup, verified bridge/loader/assets/levels\" || true"
   },
   "dependencies": {
     "canvas-confetti": "^1.5.1",

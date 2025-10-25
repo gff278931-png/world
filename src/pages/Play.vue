@@ -1,145 +1,3 @@
-<template>
-  <div class="game-container">
-    <div class="control-panel">
-      <div
-        v-if="loadInProgress"
-        class="load-status"
-      >
-        加载资源: {{ loadProgress }}% / {{ loadTotal }}
-        <span v-if="loadFailed"> · 失败 {{ loadFailed }}</span>
-      </div>
-      <div v-if="loadFailed" class="load-warning">部分资源加载失败，将使用占位图</div>
-
-      <div class="level-header">
-        <div class="level-title">
-          第 {{ game.levelIndex + 1 }} 关 · {{ levelName }}
-        </div>
-        <div class="level-progress" :class="{ pulse: scorePulse }">
-          <div class="progress-bar">
-            <div
-              class="progress-bar__fill"
-              :style="{ width: `${levelProgress}%` }"
-            />
-          </div>
-          <span>{{ game.levelScore }} / {{ game.targetScore }}</span>
-        </div>
-      </div>
-
-      <div class="stat-grid">
-        <div class="stat-item">
-          <label>总分</label>
-          <span>
-            {{ game.score }}
-            <transition name="fade">
-              <small v-if="lastGain > 0" class="gain">+{{ lastGain }}</small>
-            </transition>
-          </span>
-        </div>
-        <div class="stat-item">
-          <label>{{ limitLabel }}</label>
-          <span>{{ limitDisplay }}</span>
-        </div>
-        <div class="stat-item">
-          <label>目标分</label>
-          <span>{{ game.targetScore }}</span>
-        </div>
-        <div class="stat-item">
-          <label>连击</label>
-          <span>{{ comboStatus }}</span>
-        </div>
-        <div class="stat-item">
-          <label>洗牌剩余</label>
-          <span>{{ game.shufflesLeft }}</span>
-        </div>
-        <div class="stat-item">
-          <label>提示剩余</label>
-          <span>{{ game.hintsLeft }}</span>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="control-btn" @click="togglePause">
-          {{ game.isPaused ? '继续' : '暂停' }}
-        </button>
-        <button class="control-btn" @click="game.toggleSound()">
-          {{ game.isSoundEnabled ? '🔊' : '🔈' }}
-        </button>
-        <button
-          class="control-btn"
-          :disabled="game.shufflesLeft === 0"
-          @click="handleShuffle"
-        >
-          洗牌 ({{ game.shufflesLeft }})
-        </button>
-        <button
-          class="control-btn"
-          :disabled="game.hintsLeft === 0"
-          @click="handleHint"
-        >
-          提示 ({{ game.hintsLeft }})
-        </button>
-        <button class="control-btn" @click="restartGame">
-          重开本关
-        </button>
-      </div>
-    </div>
-
-    <div
-      class="game-board"
-      ref="gameBoardRef"
-      :class="{ paused: game.isPaused }"
-      :style="boardStyle"
-    >
-      <template v-for="node in game.nodes" :key="node.id">
-        <div
-          class="card"
-          :class="{
-            selected: node.state === 2,
-            removed: node.state === 3,
-            hinted: node.isHinted,
-            trap: node.isTrap,
-          }"
-          :style="{
-            left: `${node.left}px`,
-            top: `${node.top}px`,
-            zIndex: node.zIndex,
-            opacity: node.state === 3 ? 0 : 1,
-          }"
-          @click="handleCardClick(node)"
-        >
-          <img
-            class="card-img"
-            :src="node.sprite || placeholder"
-            :srcset="node.sprite2x ? `${node.sprite2x} 2x` : undefined"
-            draggable="false"
-            alt="card"
-          >
-          <div v-if="node.isTrap" class="trap-badge">陷阱</div>
-        </div>
-      </template>
-    </div>
-
-    <transition name="fade">
-      <div v-if="game.isGameOver" class="game-modal">
-        <div class="modal-content">
-          <h2>{{ modalTitle }}</h2>
-          <p class="modal-score">关卡得分：{{ game.levelScore }} / {{ game.targetScore }}</p>
-          <p class="modal-total">总分：{{ game.score }}</p>
-          <div class="modal-actions">
-            <button v-if="game.lastResult === 'lose'" @click="handleRetry">重试本关</button>
-            <button v-if="game.lastResult === 'win' && !isFinalLevel" @click="handleNextLevel">
-              下一关
-            </button>
-            <button v-if="game.lastResult === 'win' && isFinalLevel" @click="handleRetry">
-              再挑战一次
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import bridge from '../world/bridge'
@@ -181,6 +39,7 @@ const game = useGame({
         clearTimeout(scoreTimer)
         scoreTimer = null
       }
+
       scorePulse.value = true
       lastGain.value = payload?.gained ?? 0
       scoreTimer = window.setTimeout(() => {
@@ -189,20 +48,16 @@ const game = useGame({
         scoreTimer = null
       }, 420)
     },
-    winCallback: (_score: number, payload?: any) => {
-      console.log('关卡胜利', payload)
-    },
-    loseCallback: (_score: number, payload?: any) => {
-      console.log('关卡失败', payload)
-    },
   },
 })
 
 const levelName = computed(() => game.currentLevel.value.name ?? '挑战')
+const isFinalLevel = computed(() => game.levelIndex.value >= game.levels.length - 1)
 
 const levelProgress = computed(() => {
   const target = game.targetScore.value || 1
   if (!target) return 0
+
   return Math.min(100, Math.round((game.levelScore.value / target) * 100))
 })
 
@@ -211,10 +66,12 @@ const hasTimeLimit = computed(() => game.remainingTime.value !== null)
 const limitLabel = computed(() => (hasTimeLimit.value ? '剩余时间' : '剩余步数'))
 
 const limitDisplay = computed(() => {
-  if (hasTimeLimit.value && typeof game.remainingTime.value === 'number') {
+  if (hasTimeLimit.value && typeof game.remainingTime.value === 'number')
     return formatTime(game.remainingTime.value)
-  }
-  if (typeof game.remainingMoves.value === 'number') return game.remainingMoves.value
+
+  if (typeof game.remainingMoves.value === 'number')
+    return game.remainingMoves.value
+
   return '∞'
 })
 
@@ -233,20 +90,20 @@ const boardStyle = computed(() => {
 })
 
 const modalTitle = computed(() => {
-  if (game.lastResult.value === 'win') {
+  if (game.lastResult.value === 'win')
     return isFinalLevel.value ? '全关通关！' : '关卡完成'
-  }
-  if (game.lastResult.value === 'lose') return '挑战失败'
+
+  if (game.lastResult.value === 'lose')
+    return '挑战失败'
+
   return '本局结束'
 })
 
-const isFinalLevel = computed(() => game.levelIndex.value >= game.levels.length - 1)
-
 onMounted(async () => {
   try {
-    await bridge.init({ level: game.currentLevel.id })
-  } catch (e) {
-    console.warn('bridge.init failed', e)
+    await bridge.init({ level: game.currentLevel.value.id })
+  } catch {
+    // bridge 初始化失败时由宿主环境处理
   }
 })
 
@@ -257,15 +114,19 @@ function formatTime(sec: number) {
 }
 
 function handleCardClick(node: CardNode) {
-  if (node.state === 1 || node.state === 2) {
+  if (node.state === 1 || node.state === 2)
     game.handleSelect(node)
-  }
 }
 
 function togglePause() {
   game.togglePause()
-  if (game.isPaused.value) bridge.onPause()
-  else bridge.onResume()
+
+  if (game.isPaused.value) {
+    bridge.onPause()
+    return
+  }
+
+  bridge.onResume()
 }
 
 function handleShuffle() {
@@ -288,6 +149,196 @@ function handleNextLevel() {
   game.nextLevel()
 }
 </script>
+
+<template>
+  <div class="game-container">
+    <div class="control-panel">
+      <div
+        v-if="loadInProgress"
+        class="load-status"
+      >
+        加载资源: {{ loadProgress }}% / {{ loadTotal }}
+        <span v-if="loadFailed"> · 失败 {{ loadFailed }}</span>
+      </div>
+      <div
+        v-if="loadFailed"
+        class="load-warning"
+      >
+        部分资源加载失败，将使用占位图
+      </div>
+
+      <div class="level-header">
+        <div class="level-title">
+          第 {{ game.levelIndex + 1 }} 关 · {{ levelName }}
+        </div>
+        <div
+          class="level-progress"
+          :class="{ pulse: scorePulse }"
+        >
+          <div class="progress-bar">
+            <div
+              class="progress-bar__fill"
+              :style="{ width: `${levelProgress}%` }"
+            />
+          </div>
+          <span>{{ game.levelScore }} / {{ game.targetScore }}</span>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-item">
+          <label>总分</label>
+          <span>
+            {{ game.score }}
+            <transition name="fade">
+              <small
+                v-if="lastGain > 0"
+                class="gain"
+              >
+                +{{ lastGain }}
+              </small>
+            </transition>
+          </span>
+        </div>
+        <div class="stat-item">
+          <label>{{ limitLabel }}</label>
+          <span>{{ limitDisplay }}</span>
+        </div>
+        <div class="stat-item">
+          <label>目标分</label>
+          <span>{{ game.targetScore }}</span>
+        </div>
+        <div class="stat-item">
+          <label>连击</label>
+          <span>{{ comboStatus }}</span>
+        </div>
+        <div class="stat-item">
+          <label>洗牌剩余</label>
+          <span>{{ game.shufflesLeft }}</span>
+        </div>
+        <div class="stat-item">
+          <label>提示剩余</label>
+          <span>{{ game.hintsLeft }}</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button
+          class="control-btn"
+          @click="togglePause"
+        >
+          {{ game.isPaused ? '继续' : '暂停' }}
+        </button>
+        <button
+          class="control-btn"
+          @click="game.toggleSound()"
+        >
+          {{ game.isSoundEnabled ? '🔊' : '🔈' }}
+        </button>
+        <button
+          class="control-btn"
+          :disabled="game.shufflesLeft === 0"
+          @click="handleShuffle"
+        >
+          洗牌 ({{ game.shufflesLeft }})
+        </button>
+        <button
+          class="control-btn"
+          :disabled="game.hintsLeft === 0"
+          @click="handleHint"
+        >
+          提示 ({{ game.hintsLeft }})
+        </button>
+        <button
+          class="control-btn"
+          @click="restartGame"
+        >
+          重开本关
+        </button>
+      </div>
+    </div>
+
+    <div
+      ref="gameBoardRef"
+      class="game-board"
+      :class="{ paused: game.isPaused }"
+      :style="boardStyle"
+    >
+      <template
+        v-for="node in game.nodes"
+        :key="node.id"
+      >
+        <div
+          class="card"
+          :class="{
+            selected: node.state === 2,
+            removed: node.state === 3,
+            hinted: node.isHinted,
+            trap: node.isTrap,
+          }"
+          :style="{
+            left: `${node.left}px`,
+            top: `${node.top}px`,
+            zIndex: node.zIndex,
+            opacity: node.state === 3 ? 0 : 1,
+          }"
+          @click="handleCardClick(node)"
+        >
+          <img
+            class="card-img"
+            :src="node.sprite || placeholder"
+            :srcset="node.sprite2x ? `${node.sprite2x} 2x` : undefined"
+            draggable="false"
+            alt="card"
+          >
+          <div
+            v-if="node.isTrap"
+            class="trap-badge"
+          >
+            陷阱
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <transition name="fade">
+      <div
+        v-if="game.isGameOver"
+        class="game-modal"
+      >
+        <div class="modal-content">
+          <h2>{{ modalTitle }}</h2>
+          <p class="modal-score">
+            关卡得分：{{ game.levelScore }} / {{ game.targetScore }}
+          </p>
+          <p class="modal-total">
+            总分：{{ game.score }}
+          </p>
+          <div class="modal-actions">
+            <button
+              v-if="game.lastResult === 'lose'"
+              @click="handleRetry"
+            >
+              重试本关
+            </button>
+            <button
+              v-if="game.lastResult === 'win' && !isFinalLevel"
+              @click="handleNextLevel"
+            >
+              下一关
+            </button>
+            <button
+              v-if="game.lastResult === 'win' && isFinalLevel"
+              @click="handleRetry"
+            >
+              再挑战一次
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </div>
+</template>
 
 <style scoped>
 .game-container {

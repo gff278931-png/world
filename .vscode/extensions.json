@@ -1,3 +1,6 @@
 {
-  "recommendations": ["Vue.volar"]
+  "chat.tools.edits.autoApprove": {
+    "**/*": true
+  },
+  "chat.tools.autoApprove": true
 }

@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import Card from './components/card.vue'
 import { useGame } from './core/useGame'
 import { basicCannon, schoolPride } from './core/utils'
+import type { GameConfig } from './types/game'
 
 const containerRef = ref<HTMLElement | undefined>()
 const clickAudioRef = ref<HTMLAudioElement | undefined>()
@@ -12,7 +13,7 @@ const loseAudioRef = ref<HTMLAudioElement | undefined>()
 const welAudioRef = ref<HTMLAudioElement | undefined>()
 const curLevel = ref(1)
 const showTip = ref(false)
-const LevelConfig = [
+const LevelConfig: GameConfig[] = [
   { cardNum: 4, layerNum: 2, trap: false },
   { cardNum: 9, layerNum: 3, trap: false },
   { cardNum: 15, layerNum: 6, trap: false },
