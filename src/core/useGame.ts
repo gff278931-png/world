@@ -1,207 +1,418 @@
 import { ref } from 'vue'
-import { ceil, floor, random, shuffle } from 'lodash-es'
+import { random } from 'lodash-es'
+
 const defaultGameConfig: GameConfig = {
-  cardNum: 4,
-  layerNum: 2,
-  trap: true,
+  cardNum: 5,
+  gridSize: { rows: 8, cols: 8 },
+  minMatch: 3,
   delNode: false,
 }
 
 export function useGame(config: GameConfig): Game {
-  const { container, delNode, events = {}, ...initConfig } = { ...defaultGameConfig, ...config }
-  const histroyList = ref<CardNode[]>([])
-  const backFlag = ref(false)
-  const removeFlag = ref(false)
-  const removeList = ref<CardNode[]>([])
-  const preNode = ref<CardNode | null>(null)
-  const nodes = ref<CardNode[]>([])
-  const indexSet = new Set()
-  let perFloorNodes: CardNode[] = []
-  const selectedNodes = ref<CardNode[]>([])
-  const size = 40
-  let floorList: number[][] = []
+  const { container, delNode, sound = true, events = {}, ...initConfig } = { ...defaultGameConfig, ...config }
 
-  function updateState() {
-    nodes.value.forEach((o) => {
-      o.state = o.parents.every(p => p.state > 0) ? 1 : 0
+  const nodes = ref<CardNode[]>([])
+  const selectedNodes = ref<CardNode[]>([])
+  const removeList = ref<CardNode[]>([])
+  const removeFlag = ref(false)
+  const backFlag = ref(false)
+  const score = ref(0)
+  const isGameOver = ref(false)
+  const isPaused = ref(false)
+  const isSoundEnabled = ref(sound)
+  const size = 40
+  const grid = ref<CardNode[][]>([])
+  const selectedCard = ref<CardNode | null>(null)
+  const animationInProgress = ref(false)
+
+  const sounds: Record<string, HTMLAudioElement> = {
+    match: new Audio('/assets/audio/match.mp3'),
+    win: new Audio('/assets/audio/win.mp3'),
+    lose: new Audio('/assets/audio/lose.mp3'),
+    select: new Audio('/assets/audio/select.mp3'),
+  }
+
+  function playSound(key: keyof typeof sounds) {
+    if (!isSoundEnabled.value) return
+    const s = sounds[key]
+    if (!s) return
+    s.currentTime = 0
+    s.play().catch(() => {})
+  }
+
+  const ANIMATION_DURATION = {
+    REMOVE: 300,
+    DROP: 300,
+    NEW_CARD: 200,
+  }
+
+  // helpers
+  function isAdjacent(card1: CardNode, card2: CardNode): boolean {
+    return (Math.abs(card1.row - card2.row) === 1 && card1.column === card2.column) ||
+      (Math.abs(card1.column - card2.column) === 1 && card1.row === card2.row)
+  }
+
+  function swapCards(card1: CardNode, card2: CardNode) {
+    const r1 = card1.row
+    const c1 = card1.column
+    const top1 = card1.top
+    const left1 = card1.left
+
+    card1.row = card2.row
+    card1.column = card2.column
+    card1.top = card2.top
+    card1.left = card2.left
+
+    card2.row = r1
+    card2.column = c1
+    card2.top = top1
+    card2.left = left1
+
+    grid.value[card1.row][card1.column] = card1
+    grid.value[card2.row][card2.column] = card2
+  }
+
+  function findMatches(): CardNode[][] {
+    const matches: CardNode[][] = []
+    const { minMatch = 3 } = initConfig
+
+    if (!grid.value || grid.value.length === 0) return matches
+
+    // horizontal
+    for (let row = 0; row < grid.value.length; row++) {
+      let currentType = -1
+      let currentMatch: CardNode[] = []
+      for (let col = 0; col < grid.value[row].length; col++) {
+        const card = grid.value[row][col]
+        if (!card) continue
+        if (card.type === currentType) {
+          currentMatch.push(card)
+        } else {
+          if (currentMatch.length >= minMatch) matches.push([...currentMatch])
+          currentMatch = [card]
+          currentType = card.type
+        }
+      }
+      if (currentMatch.length >= minMatch) matches.push([...currentMatch])
+    }
+
+    // vertical
+    for (let col = 0; col < grid.value[0].length; col++) {
+      let currentType = -1
+      let currentMatch: CardNode[] = []
+      for (let row = 0; row < grid.value.length; row++) {
+        const card = grid.value[row][col]
+        if (!card) continue
+        if (card.type === currentType) {
+          currentMatch.push(card)
+        } else {
+          if (currentMatch.length >= minMatch) matches.push([...currentMatch])
+          currentMatch = [card]
+          currentType = card.type
+        }
+      }
+      if (currentMatch.length >= minMatch) matches.push([...currentMatch])
+    }
+
+    return matches
+  }
+
+  function isAllCleared(): boolean {
+    return grid.value.flat().every((c) => c.state === 3)
+  }
+
+  function removeMatches(matches: CardNode[][]) {
+    if (!matches || matches.length === 0) return
+
+    // compute score per group
+    let matchScore = 0
+    matches.forEach(group => {
+      const len = group.length
+      matchScore += len + Math.max(0, len - 3)
     })
+
+    score.value += matchScore
+    events.scoreCallback?.(score.value)
+
+    playSound('match')
+
+    const totalMatches = matches.flat()
+    totalMatches.forEach(card => {
+      card.state = 3
+      card.removeTime = Date.now()
+      removeList.value.push(card)
+    })
+
+    // if everything cleared -> win
+    if (isAllCleared()) {
+      isGameOver.value = true
+      playSound('win')
+      events.winCallback?.(score.value)
+      return
+    }
+
+    // wait for remove animation then fill
+    setTimeout(() => {
+      fillEmptySpaces()
+    }, ANIMATION_DURATION.REMOVE)
+  }
+
+  function fillEmptySpaces() {
+    animationInProgress.value = true
+
+    const rows = grid.value.length
+    const cols = grid.value[0].length
+
+    for (let col = 0; col < cols; col++) {
+      let writeRow = rows - 1
+      for (let row = rows - 1; row >= 0; row--) {
+        const card = grid.value[row][col]
+        if (card && card.state !== 3) {
+          if (writeRow !== row) {
+            grid.value[writeRow][col] = card
+            grid.value[writeRow][col].row = writeRow
+            grid.value[writeRow][col].top = writeRow * size
+          }
+          writeRow--
+        }
+      }
+      // fill remaining with new cards
+      for (let r = writeRow; r >= 0; r--) {
+        const newCard = createNewCard(r, col)
+        newCard.isNew = true
+        newCard.top = -size
+        grid.value[r][col] = newCard
+      }
+    }
+
+    // wait for drop animation
+    setTimeout(() => {
+      // settle new cards
+      grid.value.flat().forEach(card => {
+        card.top = card.row * size
+        card.isNew = false
+      })
+
+      // after new cards settled, check possible moves
+      setTimeout(() => {
+        animationInProgress.value = false
+        const hasMoves = checkPossibleMoves()
+        if (!hasMoves && !isGameOver.value) {
+          // no possible moves -> game over (lose)
+          isGameOver.value = true
+          playSound('lose')
+          events.loseCallback?.(score.value)
+        }
+      }, ANIMATION_DURATION.NEW_CARD)
+    }, ANIMATION_DURATION.DROP)
+  }
+
+  function checkPossibleMoves(): boolean {
+    const rows = grid.value.length
+    const cols = grid.value[0].length
+
+    // horizontal swaps
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols - 1; c++) {
+        // swap
+        const a = grid.value[r][c]
+        const b = grid.value[r][c + 1]
+        grid.value[r][c] = b
+        grid.value[r][c + 1] = a
+        const matches = findMatches()
+        // swap back
+        grid.value[r][c + 1] = b
+        grid.value[r][c] = a
+        if (matches.length > 0) return true
+      }
+    }
+
+    // vertical swaps
+    for (let r = 0; r < rows - 1; r++) {
+      for (let c = 0; c < cols; c++) {
+        const a = grid.value[r][c]
+        const b = grid.value[r + 1][c]
+        grid.value[r][c] = b
+        grid.value[r + 1][c] = a
+        const matches = findMatches()
+        grid.value[r + 1][c] = b
+        grid.value[r][c] = a
+        if (matches.length > 0) return true
+      }
+    }
+
+    return false
+  }
+
+  function createNewCard(row: number, col: number): CardNode {
+    const { cardNum } = initConfig
+    return {
+      id: `${row}-${col}-${Date.now()}`,
+      type: Math.floor(random() * cardNum),
+      row,
+      column: col,
+      top: row * size,
+      left: col * size,
+      state: 1,
+      zIndex: 0,
+      index: row * grid.value[0].length + col,
+      parents: [],
+      dropDistance: 0,
+      isNew: false,
+    }
   }
 
   function handleSelect(node: CardNode) {
-    if (selectedNodes.value.length === 7)
-      return
-    node.state = 2
-    histroyList.value.push(node)
-    preNode.value = node
-    const index = nodes.value.findIndex(o => o.id === node.id)
-    if (index > -1)
-      delNode && nodes.value.splice(index, 1)
+    if (animationInProgress.value || isGameOver.value || isPaused.value) return
 
-    // 判断是否有可以消除的节点
-    const selectedSomeNode = selectedNodes.value.filter(s => s.type === node.type)
-    if (selectedSomeNode.length === 2) {
-      // 第二个节点索引
-      const secondIndex = selectedNodes.value.findIndex(o => o.id === selectedSomeNode[1].id)
-      selectedNodes.value.splice(secondIndex + 1, 0, node)
-      // 为了动画效果添加延迟
-      setTimeout(() => {
-        for (let i = 0; i < 3; i++) {
-          // const index = selectedNodes.value.findIndex(o => o.type === node.type)
-          selectedNodes.value.splice(secondIndex - 1, 1)
-        }
-        preNode.value = null
-        // 判断是否已经清空节点，即是否胜利
-        if (delNode ? nodes.value.length === 0 : nodes.value.every(o => o.state > 0) && removeList.value.length === 0 && selectedNodes.value.length === 0) {
-          removeFlag.value = true
-          backFlag.value = true
-          events.winCallback && events.winCallback()
-        }
-        else {
-          events.dropCallback && events.dropCallback()
-        }
-      }, 100)
+    if (node.state === 1) playSound('select')
+
+    if (selectedCard.value === null) {
+      selectedCard.value = node
+      node.state = 2
+      return
     }
-    else {
-      events.clickCallback && events.clickCallback()
-      const index = selectedNodes.value.findIndex(o => o.type === node.type)
-      if (index > -1)
-        selectedNodes.value.splice(index + 1, 0, node)
-      else
-        selectedNodes.value.push(node)
-      // 判断卡槽是否已满，即失败
-      if (selectedNodes.value.length === 7) {
-        removeFlag.value = true
-        backFlag.value = true
-        events.loseCallback && events.loseCallback()
+
+    // second selection
+    if (isAdjacent(selectedCard.value, node)) {
+      swapCards(selectedCard.value, node)
+      const matches = findMatches()
+      if (matches.length > 0) {
+        removeMatches(matches)
+      } else {
+        // swap back
+        swapCards(node, selectedCard.value)
       }
+      selectedCard.value.state = 1
+      selectedCard.value = null
+    } else {
+      // change selection
+      selectedCard.value.state = 1
+      selectedCard.value = node
+      node.state = 2
     }
+
+    events.clickCallback?.()
   }
 
   function handleSelectRemove(node: CardNode) {
     const index = removeList.value.findIndex(o => o.id === node.id)
-    if (index > -1)
-      removeList.value.splice(index, 1)
+    if (index > -1) removeList.value.splice(index, 1)
     handleSelect(node)
   }
 
   function handleBack() {
-    const node = preNode.value
-    if (!node)
-      return
-    preNode.value = null
-    backFlag.value = true
-    node.state = 0
-    delNode && nodes.value.push(node)
-    const index = selectedNodes.value.findIndex(o => o.id === node.id)
-    selectedNodes.value.splice(index, 1)
+    if (selectedCard.value) {
+      selectedCard.value.state = 1
+      selectedCard.value = null
+      backFlag.value = true
+    }
   }
 
   function handleRemove() {
-  // 从selectedNodes.value中取出3个 到 removeList.value中
+    return
+  }
 
-    if (selectedNodes.value.length < 3)
-      return
-    removeFlag.value = true
-    preNode.value = null
-    for (let i = 0; i < 3; i++) {
-      const node = selectedNodes.value.shift()
-      if (!node)
-        return
-      removeList.value.push(node)
+  function initData(config?: GameConfig) {
+    const { cardNum, gridSize } = { ...initConfig, ...config }
+    const { rows, cols } = gridSize
+
+    removeFlag.value = false
+    backFlag.value = false
+    removeList.value = []
+    selectedNodes.value = []
+    nodes.value = []
+    selectedCard.value = null
+    score.value = 0
+    isGameOver.value = false
+    isPaused.value = false
+    animationInProgress.value = false
+
+    grid.value = Array(rows)
+      .fill(null)
+      .map((_, r) => Array(cols).fill(null).map((_, c) => createNewCard(r, c)))
+
+    nodes.value = grid.value.flat()
+
+    // remove any initial matches
+    let initialMatches = findMatches()
+    while (initialMatches.length > 0) {
+      removeMatches(initialMatches)
+      // after remove we fill; but to avoid complex timing in init, just break
+      break
+    }
+
+    updateState()
+  }
+
+  function updateState() {
+    nodes.value.forEach((node) => {
+      node.state = node.state === 3 ? 3 : 1
+    })
+  }
+
+  // start game
+  initData(config)
+
+  // rAF loop management for pause/resume
+  let rafId: number | null = null
+  function animationLoop() {
+    rafId = requestAnimationFrame(() => {
+      // placeholder for per-frame logic
+      animationLoop()
+    })
+  }
+
+  function pause() {
+    if (isGameOver.value) return
+    isPaused.value = true
+    if (rafId != null) {
+      cancelAnimationFrame(rafId)
+      rafId = null
     }
   }
 
-  function initData(config?: GameConfig | null) {
-    const { cardNum, layerNum, trap } = { ...initConfig, ...config }
-    histroyList.value = []
-    backFlag.value = false
-    removeFlag.value = false
-    removeList.value = []
-    preNode.value = null
-    nodes.value = []
-    indexSet.clear()
-    perFloorNodes = []
-    selectedNodes.value = []
-    floorList = []
-    const isTrap = trap && floor(random(0, 100)) !== 50
+  function resume() {
+    if (isGameOver.value) return
+    if (!isPaused.value) return
+    isPaused.value = false
+    if (rafId == null) animationLoop()
+  }
 
-    // 生成节点池
-    const itemTypes = (new Array(cardNum).fill(0)).map((_, index) => index + 1)
-    let itemList: number[] = []
-    for (let i = 0; i < 3 * layerNum; i++)
-      itemList = [...itemList, ...itemTypes]
+  function togglePause() {
+    if (isPaused.value) resume()
+    else pause()
+  }
 
-    if (isTrap) {
-      const len = itemList.length
-      itemList.splice(len - cardNum, len)
-    }
-    // 打乱节点
-    itemList = shuffle(shuffle(itemList))
+  function toggleSound() {
+    isSoundEnabled.value = !isSoundEnabled.value
+  }
 
-    // 初始化各个层级节点
-    let len = 0
-    let floorIndex = 1
-    const itemLength = itemList.length
-    while (len <= itemLength) {
-      const maxFloorNum = floorIndex * floorIndex
-      const floorNum = ceil(random(maxFloorNum / 2, maxFloorNum))
-      floorList.push(itemList.splice(0, floorNum))
-      len += floorNum
-      floorIndex++
-    }
-    const containerWidth = container.value!.clientWidth
-    const containerHeight = container.value!.clientHeight
-    const width = containerWidth / 2
-    const height = containerHeight / 2 - 60
-
-    floorList.forEach((o, index) => {
-      indexSet.clear()
-      let i = 0
-      const floorNodes: CardNode[] = []
-      o.forEach((k) => {
-        i = floor(random(0, (index + 1) ** 2))
-        while (indexSet.has(i))
-          i = floor(random(0, (index + 1) ** 2))
-        const row = floor(i / (index + 1))
-        const column = index ? i % index : 0
-        const node: CardNode = {
-          id: `${index}-${i}`,
-          type: k,
-          zIndex:
-        index,
-          index: i,
-          row,
-          column,
-          top: height + (size * row - (size / 2) * index),
-          left: width + (size * column - (size / 2) * index),
-          parents: [],
-          state: 0,
-        }
-        const xy = [node.top, node.left]
-        perFloorNodes.forEach((e) => {
-          if (Math.abs(e.top - xy[0]) <= size && Math.abs(e.left - xy[1]) <= size)
-            e.parents.push(node)
-        })
-        floorNodes.push(node)
-        indexSet.add(i)
-      })
-      nodes.value = nodes.value.concat(floorNodes)
-      perFloorNodes = floorNodes
-    })
-
-    updateState()
+  function restart() {
+    initData(config)
+    playSound('select')
+    if (rafId == null && !isPaused.value) animationLoop()
   }
 
   return {
     nodes,
     selectedNodes,
-    removeFlag,
     removeList,
+    removeFlag,
     backFlag,
+    score,
+    isGameOver,
+    isPaused,
+    isSoundEnabled,
     handleSelect,
+    handleSelectRemove,
     handleBack,
     handleRemove,
-    handleSelectRemove,
+    pause,
+    resume,
+    togglePause,
+    toggleSound,
+    restart,
     initData,
   }
 }
