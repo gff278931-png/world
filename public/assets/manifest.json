@@ -63,10 +63,10 @@
     "placeholder": "/assets/ui/placeholder.webp"
   },
   "audio": {
-    "select": "/audio/select.mp3",
-    "match": "/audio/match.mp3",
-    "win": "/audio/win.mp3",
-    "lose": "/audio/lose.mp3",
-    "silent": "/audio/silent.mp3"
+    "select": "/assets/audio/select.mp3",
+    "match": "/assets/audio/match.mp3",
+    "win": "/assets/audio/win.mp3",
+    "lose": "/assets/audio/lose.mp3",
+    "silent": "/assets/audio/silent.mp3"
   }
 }

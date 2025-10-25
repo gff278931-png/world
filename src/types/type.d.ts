@@ -17,6 +17,8 @@ interface Game {
   togglePause: () => void;        // 切换暂停状态
   toggleSound: () => void;        // 切换音效状态
   restart: () => void;           // 重新开始游戏
+  setVolume?: (v: number) => void; // 设置音量 (0..1)
+  getVolume?: () => number;
   initData: (config?: GameConfig) => void;
 }
 interface GameConfig {

@@ -32,3 +32,27 @@ export interface CardNode {
   left: number
   zIndex: number
 }
+
+export interface Game {
+  nodes: import('vue').Ref<CardNode[]>
+  selectedNodes: import('vue').Ref<CardNode[]>
+  removeList: import('vue').Ref<CardNode[]>
+  removeFlag: import('vue').Ref<boolean>
+  backFlag: import('vue').Ref<boolean>
+  score: import('vue').Ref<number>
+  isGameOver: import('vue').Ref<boolean>
+  isPaused: import('vue').Ref<boolean>
+  isSoundEnabled: import('vue').Ref<boolean>
+  handleSelect: (n: CardNode) => void
+  handleSelectRemove: (n: CardNode) => void
+  handleBack: () => void
+  handleRemove: () => void
+  pause: () => void
+  resume: () => void
+  togglePause: () => void
+  toggleSound: () => void
+  restart: () => void
+  setVolume?: (v: number) => void
+  getVolume?: () => number
+  initData: (config?: GameConfig) => void
+}

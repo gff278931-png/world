@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { random } from 'lodash-es'
+import bridge from '../world/bridge'
 
 const defaultGameConfig: GameConfig = {
   cardNum: 5,
@@ -20,6 +21,7 @@ export function useGame(config: GameConfig): Game {
   const isGameOver = ref(false)
   const isPaused = ref(false)
   const isSoundEnabled = ref(sound)
+  const volume = ref(1)
   const size = 40
   const grid = ref<CardNode[][]>([])
   const selectedCard = ref<CardNode | null>(null)
@@ -31,6 +33,14 @@ export function useGame(config: GameConfig): Game {
     lose: new Audio('/assets/audio/lose.mp3'),
     select: new Audio('/assets/audio/select.mp3'),
   }
+
+  // ensure audio elements follow volume state
+  Object.values(sounds).forEach(s => { s.volume = volume.value })
+
+  // handle volume control from bridge (host)
+  bridge.onVolumeChange?.((v: number) => {
+    setVolume(v)
+  })
 
   function playSound(key: keyof typeof sounds) {
     if (!isSoundEnabled.value) return
@@ -388,6 +398,16 @@ export function useGame(config: GameConfig): Game {
     isSoundEnabled.value = !isSoundEnabled.value
   }
 
+  function setVolume(v: number) {
+    volume.value = Math.max(0, Math.min(1, v))
+    Object.values(sounds).forEach(s => { s.volume = volume.value })
+    isSoundEnabled.value = volume.value > 0
+  }
+
+  function getVolume() {
+    return volume.value
+  }
+
   function restart() {
     initData(config)
     playSound('select')
@@ -413,6 +433,8 @@ export function useGame(config: GameConfig): Game {
     togglePause,
     toggleSound,
     restart,
+    setVolume,
+    getVolume,
     initData,
   }
 }

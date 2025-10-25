@@ -12,6 +12,7 @@ export interface PostScorePayload {
 
 export const bridge = {
   ready: false,
+  _volumeHandler: undefined as ((v: number) => void) | undefined,
 
   async init(opts: BridgeInitOptions = {}) {
     try {
@@ -55,7 +56,14 @@ export const bridge = {
   setVolume(v: number) {
     if (!this.ready) return
     console.log('[bridge] setVolume', v)
-    // 设置音量逻辑
+    // call registered handler (if host wants to control in-app audio)
+    if (typeof this._volumeHandler === 'function') {
+      try { this._volumeHandler(v) } catch (e) { console.warn('[bridge] volume handler error', e) }
+    }
+  },
+
+  onVolumeChange(fn: (v: number) => void) {
+    this._volumeHandler = fn
   },
 
   isReady() {
