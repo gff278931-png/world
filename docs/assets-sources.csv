@@ -1,0 +1,7 @@
+name,type,format,size,source,license,usage
+Kenney UI Pack,image,PNG->WebP,44x44/88x88,https://kenney.nl/assets/ui-pack,CC0,UI buttons and panels
+Kenney Game Icons,image,PNG->WebP,40x40/80x80,https://kenney.nl/assets/game-icons,CC0,Card faces (24 variants)
+Quick Win Notification,audio,WAV->MP3,~50KB,https://mixkit.co/free-sound-effects/notification/,Mixkit Free License,Select sound
+Game Ball Tap,audio,WAV->MP3,~40KB,https://mixkit.co/free-sound-effects/game/,Mixkit Free License,Match sound
+Winning Chimes,audio,WAV->MP3,~100KB,https://mixkit.co/free-sound-effects/win/,Mixkit Free License,Win sound
+Retro Game Over,audio,WAV->MP3,~80KB,https://mixkit.co/free-sound-effects/game-over/,Mixkit Free License,Lose sound
